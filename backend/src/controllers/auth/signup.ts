@@ -34,7 +34,8 @@ export default async (req: Request, res: Response) => {
   newUser.email = req.body.email;
   newUser.password = hashedPassword;
   newUser.citizenshipNumber = req.body.citizenshipNumber;
-  newUser.is_blind = false; // 🔥 Default value set to false
+  newUser.is_blind = false; // Default value set to false
+  newUser.is_disabled = false; // 🔥 Added default value for is_disabled
 
   try {
     await User.save(newUser);

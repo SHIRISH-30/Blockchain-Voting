@@ -25,4 +25,7 @@ export class User extends BaseEntity {
 
   @Column({ default: false }) // 🆕 Added for blind users
   is_blind!: boolean;
+
+  @Column({ default: false }) // 🆕 Added for disabled users
+  is_disabled!: boolean;
 }

@@ -35,5 +35,10 @@ def start_recording():
         print("⚠️ Speech recognition service unavailable.")
         return jsonify({"error": "Speech recognition service unavailable."}), 500
 
+@app.route('/detect', methods=['GET'])
+def detect_disabled_person():
+    print("🦽 Disabled person detected")  # Log the detection
+    return jsonify({"message": "Disabled person detected"}), 200
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -53,8 +53,7 @@ export default async (req: Request, res: Response) => {
   // Clear any existing refresh token before issuing a new one
   res.clearCookie('refreshToken'); // Clears old token before setting a new one
 
-
-  // Prepare the user object with all necessary fields, including `is_blind`
+  // Prepare the user object with all necessary fields, including `is_blind` and `is_disabled`
   const plainUserObject = {
     id: user.id,
     name: user.name,
@@ -62,6 +61,7 @@ export default async (req: Request, res: Response) => {
     email: user.email,
     admin: user.admin,
     is_blind: user.is_blind, // Ensure this field is passed correctly
+    is_disabled: user.is_disabled, // Added is_disabled field
   };
 
   // Log the plainUserObject to verify it's correct
@@ -88,8 +88,8 @@ export default async (req: Request, res: Response) => {
   console.log("Generated Access Token:", accessToken);
   console.log("Generated Refresh Token:", refreshToken);
 
-  // Log the user data to ensure the `is_blind` field is correct
-  console.log("User in login.ts", user.is_blind);
+  // Log the user data to ensure the `is_blind` and `is_disabled` fields are correct
+  console.log("User in login.ts", { is_blind: user.is_blind, is_disabled: user.is_disabled });
 
   // Return the user and access token to the client
   return res.send({

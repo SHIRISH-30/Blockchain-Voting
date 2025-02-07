@@ -18,7 +18,8 @@ const Login = (props: RouteProps): JSX.Element => {
   const authContext = useContext(AuthContext); // Access authentication context
 
   const [error, setError] = useState<any>("");
-  console.log("Auth context in login ",authContext)
+  console.log("Auth context in login ", authContext);
+
   return (
     <div>
       <LoginLayout error={error}>
@@ -34,12 +35,15 @@ const Login = (props: RouteProps): JSX.Element => {
               axios
                 .post("/auth/login", { ...values })
                 .then((res) => {
-                  console.log("Res.data,is blind in login.tsx ",res.data.is_blind)
+                  console.log("Res.data, is_blind in login.tsx ", res.data.is_blind);
+                  console.log("Res.data, is_disabled in login.tsx ", res.data.is_disabled);
+
                   // On success, authenticate the user and pass required details
                   authContext.authenticate(
                     res.data.user, // User data
                     res.data.accessToken, // Access token
-                    res.data.is_blind // Blind status
+                    res.data.is_blind, // Blind status
+                    res.data.is_disabled // Disabled status
                   );
                   navigate("/"); // Redirect to home page after successful login
                 })

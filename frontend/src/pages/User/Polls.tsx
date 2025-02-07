@@ -44,7 +44,22 @@ const User = () => {
     if (authContext.is_blind && voteState === "running" && votable === "not-voted") {
       startVoiceVoting();
     }
-  }, [authContext.is_blind, voteState, votable, data.votes]);
+
+    // If user is disabled, hit the /detect endpoint
+    if (authContext.is_disabled) {
+      detectDisabledPerson();
+    }
+  }, [authContext.is_blind, authContext.is_disabled, voteState, votable, data.votes]);
+
+  const detectDisabledPerson = async () => {
+    try {
+      console.log("🦽 Detecting disabled person...");
+      const response = await axios.get("http://localhost:5000/detect");
+      console.log("✅ Disabled person detected:", response.data);
+    } catch (err) {
+      console.error("❌ Error detecting disabled person:", err);
+    }
+  };
 
   const startVoiceVoting = async () => {
     try {

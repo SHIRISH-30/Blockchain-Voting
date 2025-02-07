@@ -10,6 +10,7 @@ interface User {
   email: string;
   admin: boolean;
   is_blind: boolean;
+  is_disabled: boolean; // Added is_disabled field
 }
 
 export default async (req: Request, res: Response) => {
@@ -33,19 +34,20 @@ export default async (req: Request, res: Response) => {
     const decodedToken = jwt.verify(refreshToken, refreshTokenSecret) as jwt.JwtPayload & User;
     console.log("Decoded Token:", decodedToken);
     console.log("Decoded is_blind:", decodedToken.is_blind);
-    
+    console.log("Decoded is_disabled:", decodedToken.is_disabled);
 
-    // Ensure is_blind is properly converted (fix for SQL returning TINYINT)
+    // Ensure boolean conversion (fix for SQL returning TINYINT)
     const userPlainObj = {
       id: decodedToken.id,
       name: decodedToken.name,
       phone: decodedToken.phone,
       email: decodedToken.email,
       admin: decodedToken.admin,
-      is_blind: decodedToken.is_blind, // Ensure boolean conversion
+      is_blind: decodedToken.is_blind,
+      is_disabled: decodedToken.is_disabled, // Ensure boolean conversion
     };
 
-    console.log("Decoded is_blind after conversion:", userPlainObj.is_blind);
+    console.log("Decoded values after conversion - is_blind:", userPlainObj.is_blind, "is_disabled:", userPlainObj.is_disabled);
 
     // Generate new tokens
     const accessToken = jwt.sign(userPlainObj, accessTokenSecret, { expiresIn: "10m" });

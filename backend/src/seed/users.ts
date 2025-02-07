@@ -5,7 +5,8 @@ type UserType = {
   citizenshipNumber: string;
   admin: boolean;
   verified: boolean;
-  is_blind: boolean; // Add new field
+  is_blind: boolean;
+  is_disabled: boolean; // New field added
 };
 
 const users: UserType[] = [
@@ -16,7 +17,8 @@ const users: UserType[] = [
     password: "$2b$10$6sdkothEwAguhA0FytsGF.gcWPmTDB5hosif6rGX5FFJK8PdBgRHu",
     admin: true,
     verified: true,
-    is_blind: false, // Default value
+    is_blind: false,
+    is_disabled: false, // Default value
   },
   {
     name: "Liza",
@@ -25,7 +27,8 @@ const users: UserType[] = [
     password: "$2b$10$70yLw0dPhAD0py/iiGUInO7kklGUmbMfa5BmXKGCXEID1ufTsqSQ6",
     admin: false,
     verified: true,
-    is_blind: false, // Default value
+    is_blind: false,
+    is_disabled: false, // Default value
   },
   {
     name: "Ben",
@@ -34,7 +37,8 @@ const users: UserType[] = [
     password: "$2b$10$1DsQFSqUs3ufyDDRBd9wYuU5i9ihbnYR4GCYJsI3IzGXamwFWnr4S",
     admin: false,
     verified: true,
-    is_blind: false, // Default value
+    is_blind: false,
+    is_disabled: false, // Default value
   },
 ];
 

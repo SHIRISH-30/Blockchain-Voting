@@ -10,7 +10,8 @@ type User = {
   id: number;
   name: string;
   admin: boolean;
-  is_blind?: boolean; // Added optional is_blind property
+  is_blind?: boolean; // Optional is_blind property
+  is_disabled?: boolean; // Optional is_disabled property
 };
 
 export const AuthContext = createContext({
@@ -19,9 +20,10 @@ export const AuthContext = createContext({
   isAdmin: false,
   authenticated: false,
   accessToken: "",
-  is_blind: false, // Ensure default value
+  is_blind: false, // Default value
+  is_disabled: false, // Default value
   loading: true,
-  authenticate: (user: User, token: string, isBlind: boolean) => {},
+  authenticate: (user: User, token: string, isBlind: boolean, isDisabled: boolean) => {},
   logout: () => {},
 });
 
@@ -35,6 +37,7 @@ export default (props: ContextProps): JSX.Element => {
     authenticated: false,
     accessToken: "",
     is_blind: false, // Default value
+    is_disabled: false, // Default value
     loading: true,
   });
 
@@ -42,8 +45,15 @@ export default (props: ContextProps): JSX.Element => {
     try {
       const res = await axios.post("/auth/check", {}, { withCredentials: true });
       console.log("Authentication successful:", res.data.user);
-      console.log("auth Tsx me is blind check ",res.data.user.is_blind)
-      authenticate(res.data.user, res.data.accessToken, res.data.user.is_blind); // Pass is_blind here
+      console.log("auth Tsx me is_blind check ", res.data.user.is_blind);
+      console.log("auth Tsx me is_disabled check ", res.data.user.is_disabled);
+
+      authenticate(
+        res.data.user,
+        res.data.accessToken,
+        res.data.user.is_blind,
+        res.data.user.is_disabled
+      ); // Pass is_blind & is_disabled here
     } catch (error) {
       console.error("Authentication failed:", error instanceof Error ? error.message : error);
       setAuthentication((prev) => ({ ...prev, loading: false }));
@@ -54,7 +64,7 @@ export default (props: ContextProps): JSX.Element => {
     checkAuthentication(); // Only call this once on initial render
   }, []);
 
-  const authenticate = (user: User, token: string, isBlind: boolean) => {
+  const authenticate = (user: User, token: string, isBlind: boolean, isDisabled: boolean) => {
     setAuthentication({
       id: user.id,
       name: user.name,
@@ -62,6 +72,7 @@ export default (props: ContextProps): JSX.Element => {
       authenticated: true,
       accessToken: token,
       is_blind: isBlind, // Directly set the is_blind value
+      is_disabled: isDisabled, // Directly set the is_disabled value
       loading: false,
     });
 
@@ -79,6 +90,7 @@ export default (props: ContextProps): JSX.Element => {
         authenticated: false,
         accessToken: "",
         is_blind: false,
+        is_disabled: false,
         loading: false,
       });
 
