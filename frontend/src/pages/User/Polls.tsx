@@ -11,45 +11,69 @@ const stringSimilarity = require("string-similarity");
 const User = () => {
   const [voteState, setVoteStatus] = useState<"finished" | "running" | "not-started" | "checking">("checking");
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({ name: "", description: "", votes: {} });
+  const [data, setData] = useState<{ 
+    name: string; 
+    description: string; 
+    votes: Record<string, number>; // ✅ Fix: Properly typed votes
+  }>({ name: "", description: "", votes: {} });
+  
   const [votable, setVotable] = useState("");
+  const [faceVerified, setFaceVerified] = useState(false);
 
   const authContext = useContext(AuthContext);
 
+  //  Face verification + Load poll data after verification
   useEffect(() => {
-    axios.get("/polls/status")
-      .then((res) => {
-        setVoteStatus(res.data.status);
-        setLoading(false);
-      })
-      .catch((error) => console.error("❌ Error fetching poll status:", error));
-  }, []);
-
-  useEffect(() => {
-    if (voteState !== "checking") {
-      axios.get("/polls/")
+    if (!faceVerified) {
+      axios.post("http://localhost:5000/start-face-recognition", { userId: authContext.id })
         .then((res) => {
-          setData(res.data);
-          setLoading(false);
+          if (res.data.verified) {
+            console.log("✅ Face verified successfully!");
+            setFaceVerified(true);
+
+            //  Fetch poll data after successful face verification
+            fetchPollData();
+          } else {
+            console.error("❌ Face verification failed!");
+            alert("Face verification failed. Please try again.");
+          }
         })
-        .catch((err) => console.error("❌ Error fetching poll data:", err));
-
-      axios.post("/polls/check-voteability", { id: authContext.id.toString() })
-        .then((res) => setVotable(res.data))
-        .catch((err) => console.error("❌ Error checking voteability:", err));
+        .catch((err) => console.error("❌ Error in face verification:", err));
     }
-  }, [voteState]);
+  }, [authContext.id, faceVerified]);
 
+  //  Fetch poll data function (called after face verification)
+  const fetchPollData = () => {
+    console.log("📊 Fetching poll data...");
+
+    axios.get("/polls/")
+      .then((res) => {
+        setData(res.data);
+        setLoading(false);
+        console.log("📜 Available candidates:", Object.keys(res.data.votes)); // Debugging log
+      })
+      .catch((err) => console.error("❌ Error fetching poll data:", err));
+
+    axios.get("/polls/status")
+      .then((res) => setVoteStatus(res.data.status))
+      .catch((error) => console.error("❌ Error fetching poll status:", error));
+
+    axios.post("/polls/check-voteability", { id: authContext.id.toString() })
+      .then((res) => setVotable(res.data))
+      .catch((err) => console.error("❌ Error checking voteability:", err));
+  };
+
+  //  Start Voice Voting only after data is fully loaded
   useEffect(() => {
-    if (authContext.is_blind && voteState === "running" && votable === "not-voted") {
-      startVoiceVoting();
+    if (faceVerified && voteState === "running" && votable === "not-voted" && Object.keys(data.votes).length > 0) {
+      if (authContext.is_blind) {
+        startVoiceVoting();
+      }
+      if (authContext.is_disabled) {
+        detectDisabledPerson();
+      }
     }
-
-    // If user is disabled, hit the /detect endpoint
-    if (authContext.is_disabled) {
-      detectDisabledPerson();
-    }
-  }, [authContext.is_blind, authContext.is_disabled, voteState, votable, data.votes]);
+  }, [faceVerified, voteState, votable, authContext.is_blind, authContext.is_disabled, data]);
 
   const detectDisabledPerson = async () => {
     try {
@@ -64,6 +88,14 @@ const User = () => {
   const startVoiceVoting = async () => {
     try {
       console.log("🎙️ Starting voice voting...");
+
+      // Ensure candidate list is populated thaki mujhe candidates mile//
+      if (Object.keys(data.votes).length === 0) {
+        console.error("⚠️ No candidates available for voting!");
+        alert("No candidates available for voting. Please try again later.");
+        return;
+      }
+
       const response = await axios.get("http://localhost:5000/start-recording");
       const spokenCandidate = response.data.text.trim().toLowerCase();
       const candidateNames = Object.keys(data.votes).map(name => name.trim().toLowerCase());
@@ -71,13 +103,10 @@ const User = () => {
       console.log("🎧 Recognized speech:", spokenCandidate);
       console.log("📜 Available candidates:", candidateNames);
 
-      // Use fuzzy matching to find the closest match
       const bestMatch = stringSimilarity.findBestMatch(spokenCandidate, candidateNames);
 
       if (bestMatch.bestMatch.rating > 0.6) {
         const matchedCandidate = bestMatch.bestMatch.target;
-        
-        // Find the exact case-sensitive match from the original candidates list
         const actualCandidate = Object.keys(data.votes).find(
           name => name.trim().toLowerCase() === matchedCandidate
         );
@@ -88,20 +117,20 @@ const User = () => {
         } else {
           console.error("⚠️ Candidate name mismatch! Retrying...");
           alert("Could not recognize the candidate name. Please try again.");
-          startVoiceVoting(); // Retry
+          startVoiceVoting();
         }
       } else {
-        console.error("⚠️ Invalid candidate name detected. Asking user to try again...");
-        alert("Could not recognize the candidate name. Please try again.");
-        startVoiceVoting(); // Retry if recognition fails
+        console.error("⚠️ No match found for the candidate.");
+        alert("No match found for the candidate. Please try again.");
       }
     } catch (err) {
-      console.error("❌ Error in speech recognition:", err);
+      console.error("❌ Error during voice voting:", err);
     }
   };
 
+  //  Vote function dekhte  (Without Reload)
   const vote = (candidate: string) => {
-    console.log("🗳️ Casting vote for:", candidate); // Debugging log
+    console.log("🗳️ Casting vote for:", candidate); 
 
     axios.post("/polls/vote", {
       id: authContext.id.toString(),
@@ -110,7 +139,19 @@ const User = () => {
     })
     .then((res) => {
       console.log("✅ Vote casted successfully!", res.data);
-      window.location.reload();
+
+      //  Updates UI instead of reloading //haha i am genius
+      setVotable("voted");
+      setVoteStatus("finished");
+
+      //  Update vote count dynamically // hope it works
+      setData(prevData => ({
+        ...prevData,
+        votes: {
+          ...prevData.votes,
+          [candidate]: (prevData.votes[candidate] || 0) + 1 // ✅ No TypeScript error now //gpt logic
+        }
+      }));
     })
     .catch((err) => {
       console.error("❌ Error voting:", err.response?.data || err);
@@ -118,6 +159,7 @@ const User = () => {
     });
   };
 
+  if (!faceVerified) return <div>Verifying face...</div>;
   if (loading || voteState === "checking") return <div>Loading...</div>;
   if (voteState === "not-started") return <Waiting />;
 

@@ -23,9 +23,12 @@ export class User extends BaseEntity {
   @Column({ default: false })
   verified!: boolean;
 
-  @Column({ default: false }) // 🆕 Added for blind users
+  @Column({ default: false }) // Added for blind users
   is_blind!: boolean;
 
-  @Column({ default: false }) // 🆕 Added for disabled users
+  @Column({ default: false }) // Added for disabled users
   is_disabled!: boolean;
+
+  @Column({ type: 'blob', nullable: true }) // Image field, allows NULL value
+  image!: Buffer | null;
 }

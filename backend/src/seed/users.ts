@@ -6,7 +6,8 @@ type UserType = {
   admin: boolean;
   verified: boolean;
   is_blind: boolean;
-  is_disabled: boolean; // New field added
+  is_disabled: boolean;
+  image: Buffer | null; // Updated image field to store binary data (MEDIUMBLOB)
 };
 
 const users: UserType[] = [
@@ -18,7 +19,8 @@ const users: UserType[] = [
     admin: true,
     verified: true,
     is_blind: false,
-    is_disabled: false, // Default value
+    is_disabled: false,
+    image: null, // Default value
   },
   {
     name: "Liza",
@@ -28,7 +30,8 @@ const users: UserType[] = [
     admin: false,
     verified: true,
     is_blind: false,
-    is_disabled: false, // Default value
+    is_disabled: false,
+    image: null, // Default value
   },
   {
     name: "Ben",
@@ -38,7 +41,8 @@ const users: UserType[] = [
     admin: false,
     verified: true,
     is_blind: false,
-    is_disabled: false, // Default value
+    is_disabled: false,
+    image: null, // Default value
   },
 ];
 

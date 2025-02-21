@@ -35,15 +35,15 @@ const Login = (props: RouteProps): JSX.Element => {
               axios
                 .post("/auth/login", { ...values })
                 .then((res) => {
-                  console.log("Res.data, is_blind in login.tsx ", res.data.is_blind);
-                  console.log("Res.data, is_disabled in login.tsx ", res.data.is_disabled);
+                  console.log("Res.data, is_blind in login.tsx ", res.data.user.is_blind);
+                  console.log("Res.data, is_disabled in login.tsx ", res.data.user.is_disabled);
 
                   // On success, authenticate the user and pass required details
                   authContext.authenticate(
                     res.data.user, // User data
                     res.data.accessToken, // Access token
-                    res.data.is_blind, // Blind status
-                    res.data.is_disabled // Disabled status
+                    res.data.user.is_blind, // Blind status // user dalna tha bas
+                    res.data.user.is_disabled // Disabled status // user dalna tha bas
                   );
                   navigate("/"); // Redirect to home page after successful login
                 })

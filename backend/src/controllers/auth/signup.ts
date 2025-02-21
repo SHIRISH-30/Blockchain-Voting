@@ -8,7 +8,9 @@ const schema = yup.object({
     name: yup.string().min(3).required(),
     email: yup.string().email().required(),
     password: yup.string().min(3).required(),
-    citizenshipNumber: yup.string().min(4),
+    citizenshipNumber: yup.string().min(4).required(),  // Validate citizenshipNumber length
+    is_blind: yup.boolean().default(false), // Optional blind status
+    is_disabled: yup.boolean().default(false), // Optional disabled status
   }),
 });
 
@@ -34,8 +36,9 @@ export default async (req: Request, res: Response) => {
   newUser.email = req.body.email;
   newUser.password = hashedPassword;
   newUser.citizenshipNumber = req.body.citizenshipNumber;
-  newUser.is_blind = false; // Default value set to false
-  newUser.is_disabled = false; // 🔥 Added default value for is_disabled
+  newUser.is_blind = req.body.is_blind || false; // Allow customization of is_blind
+  newUser.is_disabled = req.body.is_disabled || false; // Allow customization of is_disabled
+  newUser.image = null; // Default to NULL (you will add the image through SQL CMD later)
 
   try {
     await User.save(newUser);
