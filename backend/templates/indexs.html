@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SurakshaVote - Hand Gesture Recognition</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            
+            /* Gradient Background */
+            background: rgb(218,238,174);
+            background: linear-gradient(90deg, rgba(218,238,174,1) 0%, rgba(148,231,233,1) 100%);
+            
+            /* Ensuring background remains fixed while scrolling */
+            background-attachment: fixed;
+            background-size: cover;
+        }
+
+        .container {
+            width: 60%;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ddd;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+        .user-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;  /* Adjust size as needed */
+            height: 40px;
+            font-size: 24px;
+            background-color: #ddd; /* Background color of the circle */
+            border-radius: 50%;  /* Makes it circular */
+            border: 2px solid #aaa; /* Optional: Adds border */
+            color: #333;  /* Emoji color */
+        }
+
+        .video-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        video, img {
+            width: 100%;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .instructions {
+            background: #eef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        .results-container {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .results-container p {
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>SurakshaVote - Hand Gesture Voting Panel</h2>
+            <div class="user-info">
+                <span class="user-icon">👤</span>
+                <span>Name of the user</span>
+            </div>
+        </div>
+        <div class="video-container">
+            <video id="video" autoplay></video>
+        </div>
+        <div class="button-container">
+            <button onclick="captureImage()">Capture</button>
+            <button onclick="detectGesture()">Detect</button>
+        </div>
+        <div class="instructions">
+            <h3>Instructions</h3>
+            <p>1. Position your hand in front of the webcam.</p>
+            <p>2. Click 'Capture' to take a snapshot.</p>
+            <p>3. Click 'Detect' to recognize the gesture.</p>
+        </div>
+    </div>
+    <div class="container results-container" id="results">
+        <h3>Results</h3>
+        <img id="detected-image" style="display:none;">
+        <p>You have voted for: <span id="vote-result">No.</span></p>
+    </div>
+
+    <script>
+        let video = document.getElementById('video');
+        let canvas = document.createElement('canvas');
+        let context = canvas.getContext('2d');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(error => {
+                console.error("Error accessing webcam: ", error);
+            });
+
+        function captureImage() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            let imageData = canvas.toDataURL("image/jpeg");
+
+            fetch('/capture', {
+                method: 'POST',
+                body: JSON.stringify({ image: imageData }),
+                headers: { "Content-Type": "application/json" }
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert("Image captured successfully!");
+                console.log(data.message);
+            });
+        }
+
+        function detectGesture() {
+    fetch('/detect', { method: 'POST' })
+    .then(response => response.json())
+    .then(data => {
+      // Send detected number to React frontend
+      if (data.number) {
+        window.opener.postMessage(
+          { 
+            type: 'GESTURE_RESULT', 
+            number: data.number 
+          }, 
+          'http://localhost:3000' // Target origin (React app)
+        );
+      }
+      window.close(); // Close detection window
+    });
+  }
+    </script>
+</body>
+</html>
