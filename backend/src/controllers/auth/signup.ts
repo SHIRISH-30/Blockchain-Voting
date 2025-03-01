@@ -3,6 +3,7 @@ import * as yup from "yup";
 import { User } from "../../entity/User";
 import bcrypt from "bcrypt";
 
+// Validation schema
 const schema = yup.object({
   body: yup.object({
     name: yup.string().min(3).required(),
@@ -19,46 +20,53 @@ export default async (req: Request, res: Response) => {
   try {
     await schema.validate(req);
   } catch (error: any) {
-    return res.status(400).send(error.errors);
+    return res.status(400).json({ message: error.message });
   }
 
-  let hashedPassword: string;
   try {
-    hashedPassword = await bcrypt.hash(req.body.password, 10);
-  } catch (error) {
-    return res.status(500).send({ error: "Password hashing failed" });
-  }
+    // Hash password
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
-  // Convert base64 image to Buffer
-  let imageBuffer: Buffer;
-  try {
-    const base64Data = req.body.image.replace(/^data:image\/\w+;base64,/, "");
-    imageBuffer = Buffer.from(base64Data, 'base64');
-  } catch (error) {
-    return res.status(400).send({ error: "Invalid image format" });
-  }
+    // Validate base64 image
+    const base64Regex = /^data:image\/(jpeg|jpg|png);base64,/;
+    if (!base64Regex.test(req.body.image)) {
+      return res.status(400).json({ message: "Invalid image format" });
+    }
 
-  const newUser = new User();
-  newUser.admin = false;
-  newUser.name = req.body.name;
-  newUser.email = req.body.email;
-  newUser.password = hashedPassword;
-  newUser.citizenshipNumber = req.body.citizenshipNumber;
-  newUser.is_blind = req.body.is_blind;
-  newUser.is_disabled = req.body.is_disabled;
-  newUser.image = imageBuffer;
+    const base64Data = req.body.image.replace(base64Regex, "");
+    const imageBuffer = Buffer.from(base64Data, "base64");
 
-  try {
+    // Validate image size (5MB limit)
+    const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+    if (imageBuffer.length > MAX_IMAGE_SIZE) {
+      return res.status(400).json({ message: "Image size exceeds 5MB limit" });
+    }
+
+    // Create new user
+    const newUser = User.create({
+      admin: false,
+      name: req.body.name,
+      email: req.body.email,
+      password: hashedPassword,
+      citizenshipNumber: req.body.citizenshipNumber,
+      is_blind: req.body.is_blind,
+      is_disabled: req.body.is_disabled,
+      image: imageBuffer,
+    });
+
+    // Save user to database
     await User.save(newUser);
-  } catch (error) {
-    return res.status(400).send({ error: "User registration failed" });
-  }
 
-  return res.send({
-    id: newUser.id,
-    name: newUser.name,
-    email: newUser.email,
-    is_blind: newUser.is_blind,
-    is_disabled: newUser.is_disabled
-  });
+    // Return success response
+    return res.status(201).json({
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      is_blind: newUser.is_blind,
+      is_disabled: newUser.is_disabled,
+    });
+  } catch (error: any) {
+    console.error("Registration error:", error);
+    return res.status(400).json({ message: error.message || "Registration failed" });
+  }
 };
