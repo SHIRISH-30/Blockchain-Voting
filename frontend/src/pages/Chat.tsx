@@ -54,7 +54,7 @@ export default function ChatBot() {
       setMessages(prev => [...prev, { content: question, isBot: false }]);
 
       const response = await axios.post(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAbwp-WGQD5XoJHhMdd3z0NXYkvTJ8z8Mk",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=",
         {
           contents: [{
             parts: [{
