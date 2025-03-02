@@ -41,7 +41,7 @@ def get_user_image(user_id):
         print(f"Database error: {err}")
         return None
 
-# Face recognition API
+# Face recognition API ( USING DEEPFACE)
 @app.route('/start-face-recognition', methods=['POST'])
 def start_face_recognition():
     user_id = request.json.get("userId")
@@ -52,7 +52,7 @@ def start_face_recognition():
     if not reference_img_path:
         return jsonify({"error": "No reference image found"}), 404
 
-    # ✅ Open Camera Instantly
+    #  Open Camera JALDI Se
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         return jsonify({"error": "Failed to access camera"}), 500
@@ -67,9 +67,9 @@ def start_face_recognition():
         try:
             result = DeepFace.verify(frame, reference_img.copy(), model_name="Facenet", distance_metric="cosine")
 
-            # ✅ Dynamic threshold based on distance
+            # Using Dynamic threshold based on distance for more seciruty
             distance = result["distance"]
-            threshold = max(0.25, min(0.6, distance * 1.2))  # Auto-adjusted threshold
+            threshold = max(0.25, min(0.6, distance * 1.2)) 
 
             print(f"🔍 Distance: {distance}, Adaptive Threshold: {threshold}")
 
@@ -176,7 +176,7 @@ def detect_gesture():
     # Return the detected number (1, 2, or 3)
     return jsonify({
         "message": f"Detected {num} gesture(s).",
-        "number": detected_number  # Send only the detected number
+        "number": detected_number  # Sending only the detected number to react ie POLLS
     })
 
 # Home route
