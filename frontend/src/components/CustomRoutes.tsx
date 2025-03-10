@@ -11,6 +11,7 @@ import ProfilePage from "../pages/User/Profile";
 import Default from "../layouts/Default";
 import AdminUsersPage from "../pages/Admin/Users";
 import AdminVerifyPage from "../pages/Admin/Verify";
+import Chat from "../pages/Chat"
 
 export default () => {
   const authContext = useContext(AuthContext);
@@ -63,6 +64,7 @@ export default () => {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/view" element={<View />} />
+          <Route path="/chat" element={<Chat/>}/>
         </Routes>
       );
     }
