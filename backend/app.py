@@ -8,20 +8,34 @@ from flask_cors import CORS
 import time
 import base64
 from ultralytics import YOLO
+from flask_jwt_extended import JWTManager, create_access_token
 
+# Initialize Flask app
 app = Flask(__name__)
-CORS(app, supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
+
+# Configure JWT
+app.config["JWT_SECRET_KEY"] = "your-super-secret-key"  # Replace with a real secret key
+jwt = JWTManager(app)
+
+# Configure CORS
+CORS(
+    app,
+    supports_credentials=True,
+    origins=["http://localhost:3000"],  # Allow requests from React frontend
+    methods=["GET", "POST", "PUT", "DELETE"],  # Allowed HTTP methods
+    allow_headers=["Content-Type", "Authorization"],  # Allowed headers
+)
 
 # Folder to store captured images
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
- 
 
 # Function to retrieve user image from database
 def get_user_image(user_id):
     try:
-        conn = mysql.connector.connect(host="localhost", user="root", password="Shirish@30", database="bbvs")
+        conn = mysql.connector.connect(
+            host="localhost", user="root", password="Shirish@30", database="bbvs"
+        )
         cursor = conn.cursor()
         query = "SELECT image FROM user WHERE id = %s"
         cursor.execute(query, (user_id,))
@@ -32,7 +46,7 @@ def get_user_image(user_id):
             image_data = result[0]
             image_path = f"temp_images/{user_id}_image.jpg"
             os.makedirs("temp_images", exist_ok=True)  # Create directory if not exists
-            with open(image_path, 'wb') as file:
+            with open(image_path, "wb") as file:
                 file.write(image_data)
             return image_path
         else:
@@ -41,8 +55,8 @@ def get_user_image(user_id):
         print(f"Database error: {err}")
         return None
 
-# Face recognition API ( USING DEEPFACE)
-@app.route('/start-face-recognition', methods=['POST'])
+# Face recognition API (using DeepFace)
+@app.route("/start-face-recognition", methods=["POST"])
 def start_face_recognition():
     user_id = request.json.get("userId")
     print(f"📸 Starting face recognition for User ID: {user_id}")
@@ -52,7 +66,7 @@ def start_face_recognition():
     if not reference_img_path:
         return jsonify({"error": "No reference image found"}), 404
 
-    #  Open Camera JALDI Se
+    # Open camera
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         return jsonify({"error": "Failed to access camera"}), 500
@@ -61,15 +75,17 @@ def start_face_recognition():
     reference_img = cv2.imread(reference_img_path)
     face_match = False
 
-    # 🔹 Function to check face match dynamically
+    # Function to check face match dynamically
     def check_face(frame):
         nonlocal face_match
         try:
-            result = DeepFace.verify(frame, reference_img.copy(), model_name="Facenet", distance_metric="cosine")
+            result = DeepFace.verify(
+                frame, reference_img.copy(), model_name="Facenet", distance_metric="cosine"
+            )
 
-            # Using Dynamic threshold based on distance for more seciruty
+            # Using dynamic threshold based on distance for more security
             distance = result["distance"]
-            threshold = max(0.25, min(0.6, distance * 1.2)) 
+            threshold = max(0.25, min(0.6, distance * 1.2))
 
             print(f"🔍 Distance: {distance}, Adaptive Threshold: {threshold}")
 
@@ -88,7 +104,7 @@ def start_face_recognition():
             check_face(frame.copy())  # Process every 10th frame
         if face_match:
             break
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
         counter += 1
 
@@ -96,11 +112,8 @@ def start_face_recognition():
     cv2.destroyAllWindows()
     return jsonify({"verified": face_match}), 200 if face_match else 401
 
- 
-
-
 # Speech recognition API
-@app.route('/start-recording', methods=['GET'])
+@app.route("/start-recording", methods=["GET"])
 def start_recording():
     recognizer = sr.Recognizer()
     with sr.Microphone() as source:
@@ -127,25 +140,25 @@ def start_recording():
         return jsonify({"error": "Speech recognition service unavailable."}), 500
 
 # Capture image for hand gesture detection
-@app.route('/capture', methods=['POST'])
+@app.route("/capture", methods=["POST"])
 def capture_image():
-    data = request.json.get('image')
+    data = request.json.get("image")
     if not data:
         return jsonify({"message": "No image data received"}), 400
 
     # Decode base64 image
-    image_data = base64.b64decode(data.split(',')[1])
-    image_path = os.path.join(UPLOAD_FOLDER, 'captured_image.jpg')
-    
+    image_data = base64.b64decode(data.split(",")[1])
+    image_path = os.path.join(UPLOAD_FOLDER, "captured_image.jpg")
+
     with open(image_path, "wb") as img_file:
         img_file.write(image_data)
 
     return jsonify({"message": "Image captured successfully"})
 
 # Detect hand gesture
-@app.route('/detect', methods=['POST'])
+@app.route("/detect", methods=["POST"])
 def detect_gesture():
-    image_path = os.path.join(UPLOAD_FOLDER, 'captured_image.jpg')
+    image_path = os.path.join(UPLOAD_FOLDER, "captured_image.jpg")
     if not os.path.exists(image_path):
         return jsonify({"message": "No captured image found. Capture an image first."}), 400
 
@@ -176,13 +189,114 @@ def detect_gesture():
     # Return the detected number (1, 2, or 3)
     return jsonify({
         "message": f"Detected {num} gesture(s).",
-        "number": detected_number  # Sending only the detected number to react ie POLLS
+        "number": detected_number  # Sending only the detected number to React (e.g., for polls)
     })
 
-# Home route
-@app.route('/')
-def index():
-    return render_template('indexs.html')
+# Face Login API
+@app.route("/face-login", methods=["POST"])
+def face_login():
+    # Get image from request
+    data = request.json
+    if not data or "image" not in data:
+        return jsonify({"error": "No image data received"}), 400
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    try:
+        # Decode base64 image
+        image_data = base64.b64decode(data["image"].split(",")[1])
+    except Exception as e:
+        return jsonify({"error": "Invalid image data"}), 400
+
+    # Save temporary image
+    temp_dir = "temp_face_login"
+    os.makedirs(temp_dir, exist_ok=True)
+    temp_path = os.path.join(temp_dir, "captured.jpg")
+
+    with open(temp_path, "wb") as f:
+        f.write(image_data)
+
+    # Load captured image
+    try:
+        captured_img = cv2.imread(temp_path)
+        if captured_img is None:
+            raise ValueError("Invalid image")
+    except Exception as e:
+        return jsonify({"error": "Failed to process image"}), 400
+
+    # Get all users from database
+    try:
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="Shirish@30",
+            database="bbvs"
+        )
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, image, email, name, admin, is_blind, is_disabled FROM user")
+        users = cursor.fetchall()
+        conn.close()
+    except mysql.connector.Error as err:
+        print(f"Database error: {err}")
+        return jsonify({"error": "Database error"}), 500
+
+    # Compare with all users
+    matched_user = None
+    for user in users:
+        user_id, user_image, email, name, admin, is_blind, is_disabled = user 
+
+        # Skip users without images
+        if not user_image:
+            print(f"⚠️ Skipping user {user_id} - no image found")
+            continue
+
+        # Save user image to temp file
+        user_temp_path = os.path.join(temp_dir, f"user_{user_id}.jpg")
+        with open(user_temp_path, "wb") as f:
+            f.write(user_image)
+
+        # Verify face
+        try:
+            result = DeepFace.verify(
+                captured_img,
+                user_temp_path,
+                model_name="Facenet",
+                distance_metric="cosine",
+                enforce_detection=False
+            )
+
+            if result["verified"]:
+                matched_user = {
+    "id": user_id,
+    "email": email,
+    "name": name,  # Added
+    "admin": admin,  # Added
+    "is_blind": is_blind,
+    "is_disabled": is_disabled
+}
+                break
+        except Exception as e:
+            print(f"Verification error for user {user_id}: {str(e)}")
+        finally:
+            os.remove(user_temp_path)
+
+    # Cleanup
+    os.remove(temp_path)
+
+    if not matched_user:
+        return jsonify({"error": "No matching user found"}), 401
+
+    # Create JWT token
+    access_token = create_access_token(identity=matched_user["id"])
+
+    return jsonify({
+        "user": matched_user,
+        "accessToken": access_token
+    }), 200
+
+# Home route
+@app.route("/")
+def index():
+    return render_template("indexs.html")
+
+# Run the app
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
