@@ -10,8 +10,8 @@ type User = {
   id: number;
   name: string;
   admin: boolean;
-  is_blind?: boolean; // Optional is_blind property
-  is_disabled?: boolean; // Optional is_disabled property
+  is_blind?: boolean; // Optional properties
+  is_disabled?: boolean;
 };
 
 export const AuthContext = createContext({
@@ -20,8 +20,8 @@ export const AuthContext = createContext({
   isAdmin: false,
   authenticated: false,
   accessToken: "",
-  is_blind: false, // Default value
-  is_disabled: false, // Default value
+  is_blind: false, // Default
+  is_disabled: false, // Default
   loading: true,
   authenticate: (user: User, token: string, isBlind: boolean, isDisabled: boolean) => {},
   logout: () => {},
@@ -36,24 +36,21 @@ export default (props: ContextProps): JSX.Element => {
     isAdmin: false,
     authenticated: false,
     accessToken: "",
-    is_blind: false, // Default value
-    is_disabled: false, // Default value
+    is_blind: false, // Default
+    is_disabled: false, // Default
     loading: true,
   });
 
+  // Function to check authentication status
   const checkAuthentication = async () => {
     try {
       const res = await axios.post("/auth/check", {}, { withCredentials: true });
-      console.log("Authentication successful:", res.data.user);
-      console.log("auth Tsx me is_blind check ", res.data.user.is_blind);
-      console.log("auth Tsx me is_disabled check ", res.data.user.is_disabled);
 
-      authenticate(
-        res.data.user,
-        res.data.accessToken,
-        res.data.user.is_blind,
-        res.data.user.is_disabled
-      ); // Pass is_blind & is_disabled here
+      const { user, accessToken } = res.data;
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      authenticate(user, accessToken, user.is_blind, user.is_disabled);
     } catch (error) {
       console.error("Authentication failed:", error instanceof Error ? error.message : error);
       setAuthentication((prev) => ({ ...prev, loading: false }));
@@ -61,9 +58,19 @@ export default (props: ContextProps): JSX.Element => {
   };
 
   useEffect(() => {
-    checkAuthentication(); // Only call this once on initial render
+    // Load authentication state on page load
+    const savedUser = localStorage.getItem("user");
+    const savedToken = localStorage.getItem("accessToken");
+
+    if (savedUser && savedToken) {
+      const parsedUser = JSON.parse(savedUser);
+      authenticate(parsedUser, savedToken, parsedUser.is_blind, parsedUser.is_disabled);
+    } else {
+      checkAuthentication(); // Fallback if no saved session
+    }
   }, []);
 
+  // Authentication function
   const authenticate = (user: User, token: string, isBlind: boolean, isDisabled: boolean) => {
     setAuthentication({
       id: user.id,
@@ -71,17 +78,21 @@ export default (props: ContextProps): JSX.Element => {
       isAdmin: user.admin,
       authenticated: true,
       accessToken: token,
-      is_blind: isBlind, // Directly set the is_blind value
-      is_disabled: isDisabled, // Directly set the is_disabled value
+      is_blind: isBlind, // Persist is_blind status
+      is_disabled: isDisabled, // Persist is_disabled status
       loading: false,
     });
 
-    navigate("/"); // Redirect to home page
+    navigate("/"); // Redirect to home
   };
 
+  // Logout function
   const logout = async () => {
     try {
       await axios.post("/auth/logout", {}, { withCredentials: true });
+
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("user");
 
       setAuthentication({
         id: 0,
@@ -94,7 +105,7 @@ export default (props: ContextProps): JSX.Element => {
         loading: false,
       });
 
-      navigate("/"); // Redirect to login page
+      navigate("/login"); // Redirect to login
     } catch (error) {
       console.error("Logout failed:", error instanceof Error ? error.message : error);
     }
