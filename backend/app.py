@@ -9,12 +9,18 @@ import time
 import base64
 from ultralytics import YOLO
 from flask_jwt_extended import JWTManager, create_access_token
+from datetime import timedelta
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
 
 # Configure JWT
-app.config["JWT_SECRET_KEY"] = "your-super-secret-key"  # Replace with a real secret key
+app.config["JWT_SECRET_KEY"] = os.getenv("ACCESS_TOKEN_SECRET")  # Same as Node.js
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=10)  # 10-minute expiry
 jwt = JWTManager(app)
 
 # Configure CORS
@@ -265,13 +271,13 @@ def face_login():
 
             if result["verified"]:
                 matched_user = {
-    "id": user_id,
-    "email": email,
-    "name": name,  # Added
-    "admin": admin,  # Added
-    "is_blind": is_blind,
-    "is_disabled": is_disabled
-}
+                    "id": user_id,
+                    "email": email,
+                    "name": name,
+                    "admin": admin,
+                    "is_blind": is_blind,
+                    "is_disabled": is_disabled
+                }
                 break
         except Exception as e:
             print(f"Verification error for user {user_id}: {str(e)}")
@@ -284,8 +290,11 @@ def face_login():
     if not matched_user:
         return jsonify({"error": "No matching user found"}), 401
 
-    # Create JWT token
-    access_token = create_access_token(identity=matched_user["id"])
+    # Create JWT token with the same claims as login.ts
+    access_token = create_access_token(
+        identity=matched_user,
+        expires_delta=timedelta(minutes=10)  # 10-minute expiry
+    )
 
     return jsonify({
         "user": matched_user,
