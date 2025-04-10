@@ -348,7 +348,7 @@ const Signup = (): JSX.Element => {
                       checked={values.is_blind}
                       onChange={(e) => setFieldValue("is_blind", e.target.checked)}
                     />
-                    I am blind or visually impaired
+                    I am blind or visually impaired - Voice Detection Voting
                   </label>
                   <label>
                     <input
@@ -356,7 +356,7 @@ const Signup = (): JSX.Element => {
                       checked={values.is_disabled}
                       onChange={(e) => setFieldValue("is_disabled", e.target.checked)}
                     />
-                    I have physical disabilities
+                    I cannot speak or hear - Hand Gesture Voting
                   </label>
                 </div>
 

@@ -9,12 +9,19 @@ import time
 import base64
 from ultralytics import YOLO
 from flask_jwt_extended import JWTManager, create_access_token
+from datetime import timedelta
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
 
+
 # Configure JWT
-app.config["JWT_SECRET_KEY"] = "your-super-secret-key"  # Replace with a real secret key
+app.config["JWT_SECRET_KEY"] = os.getenv("ACCESS_TOKEN_SECRET")  # Same as Node.js
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=10)  # 10-minute expiry
 jwt = JWTManager(app)
 
 # Configure CORS
@@ -26,6 +33,8 @@ CORS(
     allow_headers=["Content-Type", "Authorization"],  # Allowed headers
 )
 
+
+
 # Folder to store captured images
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -34,7 +43,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def get_user_image(user_id):
     try:
         conn = mysql.connector.connect(
-            host="localhost", user="root", password="Shirish@30", database="bbvs"
+            host="localhost", user="root", password="P@p310303", database="bbvs"
         )
         cursor = conn.cursor()
         query = "SELECT image FROM user WHERE id = %s"
@@ -139,6 +148,7 @@ def start_recording():
         print("⚠️ Speech recognition service unavailable.")
         return jsonify({"error": "Speech recognition service unavailable."}), 500
 
+
 # Capture image for hand gesture detection
 @app.route("/capture", methods=["POST"])
 def capture_image():
@@ -163,7 +173,7 @@ def detect_gesture():
         return jsonify({"message": "No captured image found. Capture an image first."}), 400
 
     # Load YOLO model and detect gestures
-    yolo = YOLO("C:\\Users\\Shirish Shetty\\OneDrive\\Desktop\\Hand gestures\\Hand-Gesture-Voting\\weights\\best.pt")
+    yolo = YOLO("D:/MajorProjects/MJRPJR/runs/detect/train3/weights/best.pt")
     results = yolo.predict(image_path, save=True, show=False)
 
     # Define class labels mapping
@@ -227,7 +237,7 @@ def face_login():
         conn = mysql.connector.connect(
             host="localhost",
             user="root",
-            password="Shirish@30",
+            password="P@p310303",
             database="bbvs"
         )
         cursor = conn.cursor()
@@ -265,13 +275,13 @@ def face_login():
 
             if result["verified"]:
                 matched_user = {
-    "id": user_id,
-    "email": email,
-    "name": name,  # Added
-    "admin": admin,  # Added
-    "is_blind": is_blind,
-    "is_disabled": is_disabled
-}
+                    "id": user_id,
+                    "email": email,
+                    "name": name,
+                    "admin": admin,
+                    "is_blind": is_blind,
+                    "is_disabled": is_disabled
+                }
                 break
         except Exception as e:
             print(f"Verification error for user {user_id}: {str(e)}")
@@ -284,13 +294,56 @@ def face_login():
     if not matched_user:
         return jsonify({"error": "No matching user found"}), 401
 
-    # Create JWT token
-    access_token = create_access_token(identity=matched_user["id"])
+    # Create JWT token with the same claims as login.ts
+    access_token = create_access_token(
+        identity=matched_user,
+        expires_delta=timedelta(minutes=10)  # 10-minute expiry
+    )
 
     return jsonify({
         "user": matched_user,
         "accessToken": access_token
     }), 200
+
+#Details route
+from flask import Flask, request, jsonify
+import mysql.connector
+
+@app.route('/details', methods=['POST'])
+def get_user_details():
+    data = request.json
+    user_id = data.get('id')
+    name = data.get('name')
+
+    if not user_id or not name:
+        return jsonify({'error': 'Missing user ID or name'}), 400
+
+    try:
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="P@p310303",
+            database="bbvs"
+        )
+        cursor = conn.cursor(dictionary=True)
+        query = """
+            SELECT id, name, citizenshipNumber, email, admin, verified, is_blind, is_disabled
+            FROM user WHERE id = %s AND name = %s
+        """
+        cursor.execute(query, (user_id, name))
+        user_details = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if user_details:
+            return jsonify({'user_details': user_details}), 200
+        else:
+            return jsonify({'error': 'User not found'}), 404
+
+    except mysql.connector.Error as err:
+        return jsonify({'error': f'Database error: {err}'}), 500
+
+
 
 # Home route
 @app.route("/")

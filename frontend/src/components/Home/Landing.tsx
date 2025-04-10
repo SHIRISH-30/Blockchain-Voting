@@ -24,6 +24,9 @@ const Landing = () => {
           <Link to="/chat">
             <button className="button-black">Chat Bot</button>
           </Link>
+          <Link to="/community">
+            <button className="button-black">Community Page</button>
+          </Link>
         </div>
       </div>
 
