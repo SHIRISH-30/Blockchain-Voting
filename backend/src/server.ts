@@ -28,8 +28,8 @@ app.post('/rfid-login', (req: Request, res: Response) => {
   const { tag } = req.body;
   if (tag === '22721112346') {
     rfidCredentials = {
-      email: 'raj@gmail.com',
-      password: 'raj@gmail.com'
+      email: 'sample4@gmail.com',
+      password: 'sample4@gmail.com'
     };
     res.sendStatus(200);
   } else {

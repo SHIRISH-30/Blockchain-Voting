@@ -11,6 +11,25 @@ from ultralytics import YOLO
 from flask_jwt_extended import JWTManager, create_access_token
 from datetime import timedelta
 from dotenv import load_dotenv
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+import smtplib
+from PIL import Image, ImageDraw, ImageFont
+import io
+from reportlab.pdfgen import canvas
+from io import BytesIO
+import datetime
+import uuid
+from email.mime.application import MIMEApplication
+from flask import Flask, request, jsonify 
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import landscape, letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import Paragraph, Frame, Spacer
+from reportlab.lib.enums import TA_CENTER
+from scipy.spatial.distance import cosine
 
 # Load environment variables from .env file
 load_dotenv()
@@ -344,6 +363,245 @@ def get_user_details():
         return jsonify({'error': f'Database error: {err}'}), 500
 
 
+@app.route('/mail', methods=['POST'])
+def send_certificate_email():
+    try:
+        user_id = request.json.get('id')
+        if not user_id:
+            return jsonify({"error": "User ID required"}), 400
+
+        # Database connection
+        try:
+            conn = mysql.connector.connect(
+                host="localhost",
+                user="root",
+                password="P@p310303",
+                database="bbvs"
+            )
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT name, email FROM user WHERE id = %s", (user_id,))
+            user = cursor.fetchone()
+        except mysql.connector.Error as err:
+            return jsonify({"error": f"Database error: {err}"}), 500
+        finally:
+            if 'conn' in locals() and conn.is_connected():
+                cursor.close()
+                conn.close()
+
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Generate PDF certificate
+        try:
+            buffer = BytesIO()
+            # Using landscape letter size (11×8.5 inches)
+            width, height = landscape(letter)
+            c = canvas.Canvas(buffer, pagesize=landscape(letter))
+            
+            # Set background color for entire page (very light blue)
+            c.setFillColor(colors.Color(0.95, 0.98, 1.0))
+            c.rect(0, 0, width, height, fill=1, stroke=0)
+            
+            # Primary border - thick dark blue 
+            c.setStrokeColor(colors.Color(0.0, 0.11, 0.66))  # Navy blue
+            c.setLineWidth(8)
+            border_margin = 0.5*inch
+            c.roundRect(border_margin, border_margin, 
+                        width - 2*border_margin, height - 2*border_margin, 
+                        0.2*inch, stroke=1, fill=0)
+            
+            # Secondary inner border - thin gold
+            c.setStrokeColor(colors.Color(0.85, 0.65, 0.12))  # Gold
+            c.setLineWidth(1)
+            inner_margin = 0.7*inch
+            c.roundRect(inner_margin, inner_margin, 
+                        width - 2*inner_margin, height - 2*inner_margin, 
+                        0.15*inch, stroke=1, fill=0)
+            
+            # Add certificate corners - decorative X marks
+            c.setStrokeColor(colors.Color(0.0, 0.11, 0.66))  # Navy blue
+            c.setLineWidth(1.5)
+            corner_size = 0.25*inch
+            
+            # Top-left
+            c.line(border_margin + 0.1*inch, height - border_margin - 0.1*inch, 
+                   border_margin + corner_size, height - border_margin - corner_size)
+            c.line(border_margin + 0.1*inch, height - border_margin - corner_size, 
+                   border_margin + corner_size, height - border_margin - 0.1*inch)
+            
+            # Top-right
+            c.line(width - border_margin - 0.1*inch, height - border_margin - 0.1*inch, 
+                   width - border_margin - corner_size, height - border_margin - corner_size)
+            c.line(width - border_margin - 0.1*inch, height - border_margin - corner_size, 
+                   width - border_margin - corner_size, height - border_margin - 0.1*inch)
+            
+            # Bottom-left (omitted to avoid overdoing it)
+            
+            # Bottom-right (omitted to avoid overdoing it)
+            
+            # Header - CERTIFICATE OF PARTICIPATION
+            c.setFillColor(colors.Color(0.0, 0.11, 0.66))  # Navy blue
+            c.setFont("Helvetica-Bold", 38)
+            c.drawCentredString(width/2, height - 2.3*inch, "CERTIFICATE OF PARTICIPATION")
+            
+            # Decorative line under header
+            c.setStrokeColor(colors.Color(0.85, 0.65, 0.12))  # Gold
+            c.setLineWidth(2)
+            c.line(width/2 - 3.5*inch, height - 2.5*inch, width/2 + 3.5*inch, height - 2.5*inch)
+            
+            # Main content area - light blue rectangle
+            content_top = height - 2.7*inch
+            content_height = 4.2*inch
+            content_width = 8*inch
+            
+            c.setFillColor(colors.Color(0.85, 0.93, 0.97))  # Light blue
+            c.roundRect(width/2 - content_width/2, content_top - content_height, 
+                       content_width, content_height, 0.1*inch, fill=1, stroke=0)
+            
+            # Add text content using formatted paragraphs
+            styles = getSampleStyleSheet()
+            
+            # "This Certificate is Awarded To" text
+            award_style = ParagraphStyle(
+                'AwardStyle',
+                parent=styles['Normal'],
+                fontName='Helvetica',
+                fontSize=18,
+                alignment=TA_CENTER,
+                textColor=colors.black,
+                leading=22
+            )
+            
+            # Name style
+            name_style = ParagraphStyle(
+                'NameStyle',
+                parent=styles['Normal'],
+                fontName='Helvetica-Bold',
+                fontSize=42,
+                alignment=TA_CENTER,
+                textColor=colors.Color(0.0, 0.11, 0.66),  # Navy blue
+                leading=50
+            )
+            
+            # Regular text style
+            text_style = ParagraphStyle(
+                'TextStyle',
+                parent=styles['Normal'],
+                fontName='Helvetica',
+                fontSize=18,
+                alignment=TA_CENTER,
+                textColor=colors.black,
+                leading=24
+            )
+            
+            # Position text elements
+            frame = Frame(
+                width/2 - 3.5*inch,  # x
+                content_top - content_height + 0.5*inch,  # y
+                7*inch,  # width
+                content_height - 1*inch,  # height
+                showBoundary=0
+            )
+            
+            content = [
+                Paragraph("This Certificate is Awarded To", award_style),
+                Spacer(1, 0.2*inch),
+                Paragraph(user['name'], name_style),
+                Spacer(1, 0.3*inch),
+                Paragraph("in recognition of your active participation in", text_style),
+                Spacer(1, 0.1*inch),
+                Paragraph("Our Voting Process", text_style),
+                Spacer(1, 0.3*inch),
+                Paragraph(f"Date: {datetime.datetime.now().strftime('%B %d, %Y')}", text_style)
+            ]
+            
+            frame.addFromList(content, c)
+            
+            # Add verification ID at bottom
+            cert_id = uuid.uuid4().hex[:8].upper()
+            c.setFont("Helvetica-Oblique", 14)
+            c.setFillColor(colors.Color(0.0, 0.11, 0.66))  # Navy blue
+            c.drawCentredString(width/2, 1.2*inch, f"Verified Certificate ID: {cert_id}")
+            
+            c.save()
+            buffer.seek(0)
+        except Exception as e:
+            app.logger.error(f"PDF generation error: {str(e)}")
+            return jsonify({"error": f"PDF generation failed: {str(e)}"}), 500
+
+        # Send email with certificate
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = os.getenv("EMAIL_ADDRESS")
+            msg['To'] = user['email']
+            msg['Subject'] = "Your Voting Participation Certificate"
+            
+            body = f"""<html>
+                <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h1 style="color: #001aad; margin-bottom: 5px;">Your Certificate of Participation</h1>
+                        <div style="border-bottom: 2px solid #daa520; width: 100px; margin: 0 auto;"></div>
+                    </div>
+                    
+                    <p style="font-size: 16px; line-height: 1.6;">Dear <strong>{user['name']}</strong>,</p>
+                    
+                    <p style="font-size: 16px; line-height: 1.6;">Thank you for participating in our democratic voting process. 
+                    Your engagement helps strengthen our community and ensures that every voice is heard.</p>
+                    
+                    <p style="font-size: 16px; line-height: 1.6;">Attached to this email is your official Certificate of Participation 
+                    as recognition of your civic responsibility.</p>
+                    
+                    <div style="background-color: #f5f8fa; border-left: 4px solid #001aad; padding: 15px; margin: 25px 0;">
+                        <p style="color: #555; font-style: italic; margin: 0;">
+                        "The vote is the most powerful instrument ever devised by man for breaking down injustice and 
+                        destroying the terrible walls which imprison men because they are different from other men."
+                        </p>
+                        <p style="color: #001aad; margin: 10px 0 0; text-align: right;">- Lyndon B. Johnson</p>
+                    </div>
+                    
+                    <p style="font-size: 16px; line-height: 1.6;">Thank you for being an active participant in our democracy.</p>
+                    
+                    <p style="font-size: 16px; line-height: 1.6;">Best regards,<br>
+                    <strong>The Electoral Committee</strong></p>
+                    
+                    <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #777; font-size: 12px;">
+                        <p>This is an automated message. Please do not reply to this email.</p>
+                        <p>Certificate ID: <span style="font-family: monospace;">{cert_id}</span></p>
+                    </div>
+                </body>
+            </html>"""
+            
+            msg.attach(MIMEText(body, 'html'))
+            
+            # Attach the PDF
+            pdf = MIMEApplication(buffer.read(), _subtype='pdf')
+            pdf.add_header('Content-Disposition', 'attachment', 
+                          filename=f"Voting_Certificate_{user['name'].replace(' ', '_')}.pdf")
+            msg.attach(pdf)
+            
+            # Send email
+            with smtplib.SMTP(os.getenv("SMTP_SERVER"), os.getenv("SMTP_PORT")) as server:
+                server.starttls()
+                server.login(os.getenv("EMAIL_ADDRESS"), os.getenv("EMAIL_PASSWORD"))
+                server.sendmail(
+                    os.getenv("EMAIL_ADDRESS"),
+                    user['email'],
+                    msg.as_string()
+                )
+            
+            return jsonify({
+                "message": "Certificate sent successfully",
+                "certificate_id": cert_id
+            }), 200
+        
+        except Exception as e:
+            app.logger.error(f"Email sending error: {str(e)}")
+            return jsonify({"error": f"Email failed: {str(e)}"}), 500
+
+    except Exception as e:
+        app.logger.error(f"Unexpected error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
 
 # Home route
 @app.route("/")
@@ -352,4 +610,4 @@ def index():
 
 # Run the app
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True,use_reloader=False)

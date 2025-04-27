@@ -13,27 +13,28 @@ export default function ChatBot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const surpriseOptions = [
-    "Explain the election process in India",
-    "What is EVM and how does it work?",
-    "List major political parties in India",
-    "What is the role of Election Commission of India?",
-    "Explain VVPAT system in Indian elections",
-    "What are the key challenges in Indian elections?",
-    "How is election security maintained in India?",
-    "What is the Model Code of Conduct?",
-    "Explain voter registration process in India",
-    "What are the recent electoral reforms in India?",
-    "How does vote counting work in India?",
-    "What is NOTA in Indian elections?",
-    "Explain the election symbol allocation process",
-    "What are the qualifications to become an MP in India?",
-    "How are election dates decided in India?",
-    "Explain the electoral bond system",
-    "What is the anti-defection law?",
-    "How does coalition government work in India?",
-    "What is the difference between Lok Sabha and Rajya Sabha?",
-    "Explain the role of observers in elections"
-  ];
+    "Explain how blockchain is used in voting systems",
+    "What are the benefits of blockchain-based voting?",
+    "How does a blockchain voting system ensure security and transparency?",
+    "What are smart contracts and their role in blockchain voting?",
+    "How is voter authentication managed in blockchain voting?",
+    "What are the challenges of implementing blockchain voting in real-world elections?",
+    "How does decentralized storage help in blockchain voting systems?",
+    "Explain the role of cryptography in blockchain voting",
+    "How can blockchain voting systems prevent voter fraud?",
+    "What measures are taken to ensure voting privacy in blockchain elections?",
+    "How can blockchain voting be made accessible to disabled and handicapped voters?",
+    "Explain the use of voice and gesture recognition in voting systems for disabled voters",
+    "What features should a blockchain voting app have for accessibility compliance?",
+    "How can organizations conduct internal elections using blockchain voting platforms?",
+    "What are the advantages for companies or colleges to use blockchain voting apps?",
+    "How does vote counting work in blockchain-based elections?",
+    "What is the role of audit trails in blockchain voting systems?",
+    "How can blockchain voting systems handle large-scale elections?",
+    "Explain remote voting using blockchain for differently-abled citizens",
+    "What are the key security certifications needed for a blockchain voting app?"
+];
+
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -240,7 +241,7 @@ export default function ChatBot() {
             <div className="d-flex align-items-center justify-content-between mb-4">
               <h1 className="header-text">
                 <i className="bi bi-chat-dots-fill me-2"></i>
-                Indian Election Expert
+                Election Expert
               </h1>
               <button 
                 className="btn btn-outline-primary surprise-btn d-flex align-items-center" 

@@ -24,6 +24,128 @@ const speakMessage = (text: string) => {
   });
 };
 
+// Face Verification Loader Component
+const FaceVerificationLoader: React.FC = () => {
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100vh",
+      backgroundColor: "#f8f9fa",
+    }}>
+      <div style={{
+        backgroundColor: "white",
+        borderRadius: "12px",
+        padding: "32px",
+        boxShadow: "0 6px 24px rgba(0, 0, 0, 0.1)",
+        textAlign: "center",
+        maxWidth: "400px",
+        width: "90%",
+      }}>
+        <div style={{
+          position: "relative",
+          width: "80px",
+          height: "80px",
+          margin: "0 auto 24px",
+        }}>
+          {/* Face outline */}
+          <div style={{
+            position: "absolute",
+            width: "60px",
+            height: "60px",
+            borderRadius: "50%",
+            border: "3px solid #3498db",
+            top: "10px",
+            left: "10px",
+          }} />
+          
+          {/* Scanning animation */}
+          <div style={{
+            position: "absolute",
+            width: "100%",
+            height: "4px",
+            backgroundColor: "rgba(52, 152, 219, 0.5)",
+            top: "38px",
+            left: "0",
+            animation: "scan 1.5s infinite ease-in-out",
+          }} />
+          
+          {/* Circular loader */}
+          <div style={{
+            position: "absolute",
+            width: "80px",
+            height: "80px",
+            borderRadius: "50%",
+            border: "3px solid transparent",
+            borderTopColor: "#3498db",
+            animation: "spin 1s infinite linear",
+          }} />
+        </div>
+        
+        <h3 style={{
+          margin: "0 0 8px 0",
+          color: "#333",
+          fontWeight: 600,
+          fontSize: "18px",
+        }}>Face Verification</h3>
+        
+        <p style={{
+          margin: "0",
+          color: "#666",
+          fontSize: "14px",
+          lineHeight: "1.5",
+        }}>Please wait while we securely verify your identity</p>
+      </div>
+      
+      <style>{`
+        @keyframes scan {
+          0% { top: 10px; opacity: 0; }
+          50% { opacity: 1; }
+          100% { top: 66px; opacity: 0; }
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+// Loading Spinner Component
+const LoadingSpinner: React.FC = () => {
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100vh",
+    }}>
+      <div style={{
+        width: "50px",
+        height: "50px",
+        border: "5px solid #f3f3f3",
+        borderTop: "5px solid #3498db",
+        borderRadius: "50%",
+        animation: "spin 1s linear infinite",
+        marginBottom: "20px"
+      }}></div>
+      <p style={{ color: "#666" }}>Loading poll data...</p>
+      
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 const User = () => {
   const [voteState, setVoteStatus] = useState<"finished" | "running" | "not-started" | "checking">("checking");
   const [loading, setLoading] = useState(true);
@@ -190,33 +312,46 @@ const User = () => {
 
   // Vote function
   const vote = (candidate: string) => {
-    console.log("🗳️ Casting vote for:", candidate);
+    console.log("🗳️ Starting voting process for:", candidate);
+  
+    // First submit the vote
     axios.post("/polls/vote", {
       id: authContext.id.toString(),
       name: authContext.name,
       candidate,
     })
-    .then(async (res) => {
-      console.log("✅ Vote casted successfully!", res.data);
-      await speakMessage(`Your vote for ${candidate} has been recorded. Thank you.`);
+    .then((voteRes) => {
+      console.log("✅ Vote casted successfully!", voteRes.data);
+      
+      // Update UI state first
       setVotable("voted");
       setVoteStatus("finished");
       setData(prevData => ({
         ...prevData,
         votes: {
           ...prevData.votes,
-          [candidate]: (prevData.votes[candidate] || 0) + 1
-        } 
+          [candidate]: (prevData.votes[candidate] || 0) + 1,
+        },
       }));
+
+      // Then send certificate email
+      return axios.post("http://localhost:5000/mail", {
+        id: authContext.id.toString(),
+      });
+    })
+    .then(async (emailRes) => {
+      console.log("📧 Certificate email sent successfully", emailRes.data);
+      await speakMessage("Your vote has been recorded. Thank you!");
     })
     .catch(async (err) => {
-      console.error("❌ Error voting:", err.response?.data || err);
-      // await speakMessage("Error submitting your vote. Please try again.");
+      console.error("❌ Error in voting process:", err.response?.data || err);
+      await speakMessage("Failed to complete the voting process. Please try again.");
     });
   };
 
-  if (!faceVerified) return <div>Verifying face...</div>;
-  if (loading || voteState === "checking") return <div>Loading...</div>;
+  // Replace the simple div with our professional loader
+  if (!faceVerified) return <FaceVerificationLoader />;
+  if (loading || voteState === "checking") return <LoadingSpinner />;
   if (voteState === "not-started") return <Waiting />;
 
   return (
@@ -228,6 +363,7 @@ const User = () => {
           userId={authContext.id}
           userName={authContext.name}
           votes={data.votes}
+          onVote={vote}
         />
       </>
     </Panel>
