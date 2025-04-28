@@ -62,7 +62,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def get_user_image(user_id):
     try:
         conn = mysql.connector.connect(
-            host="localhost", user="root", password="P@p310303", database="bbvs"
+            host="localhost", user="root", password="", database="bbvs"
         )
         cursor = conn.cursor()
         query = "SELECT image FROM user WHERE id = %s"
@@ -256,7 +256,7 @@ def face_login():
         conn = mysql.connector.connect(
             host="localhost",
             user="root",
-            password="P@p310303",
+            password="",
             database="bbvs"
         )
         cursor = conn.cursor()
@@ -341,7 +341,7 @@ def get_user_details():
         conn = mysql.connector.connect(
             host="localhost",
             user="root",
-            password="P@p310303",
+            password="",
             database="bbvs"
         )
         cursor = conn.cursor(dictionary=True)
@@ -375,7 +375,7 @@ def send_certificate_email():
             conn = mysql.connector.connect(
                 host="localhost",
                 user="root",
-                password="P@p310303",
+                password="",
                 database="bbvs"
             )
             cursor = conn.cursor(dictionary=True)
