@@ -9,9 +9,9 @@
 MFRC522 rfid(SS_PIN, RST_PIN);
 
 // WiFi Settings
-const char* ssid = "realme GT Neo2 5G";
-const char* password = "8108852634";
-const String serverURL = "http://192.168.38.51:8000/rfid-login";  
+const char* ssid = "";
+const char* password = "";
+const String serverURL = "http://"Your Ip address":8000/rfid-login";  
 
 void setup() {
   Serial.begin(115200);
